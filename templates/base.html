@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}{% endblock %} - Lab3Forum</title>
+
+    <script>
+        function login() {
+            const login_form = document.getElementById("login-form");
+            const login_button = document.getElementById("login-button");
+            const username_input = document.getElementById("username-input");
+            const password_input = document.getElementById("password-input");
+            login_button.disabled = true;
+            let request = new XMLHttpRequest();
+            request.open("POST", "/api/login", true);
+            let form_data = new FormData(login_form);
+            request.onreadystatechange = function() {
+                if (this.readyState === 4) {
+                    if (this.status === 200) {
+                        window.location.reload(true);
+                    }
+                    else if (this.status === 403) {
+                        username_input.className = "incorrect-value";
+                        password_input.className = "incorrect-value";
+                    }
+                    login_button.disabled = false;
+                }
+            }
+            document.cookie.split('; ').map(t => t.split('=')).map(kv =>
+            {if(!form_data.get(kv[0])) form_data.set(kv[0], kv[1]); })
+            form_data.set("logged_in", "true");
+            request.send(form_data);
+        }
+
+        function logout() {
+            const logout_button = document.getElementById("logout-button");
+            logout_button.disabled = true;
+            let request = new XMLHttpRequest();
+            window.location.reload(true);
+            request.onreadystatechange = function() {
+                window.location.reload(true);
+            }
+            request.open("POST", "/api/logout", true);
+            request.send();
+        }
+    </script>
+
+    {% block head %}{% endblock %}
+</head>
+
+<body>
+<div id="login_panel">
+  {% if logged_in %}
+      <p>
+          Logged in as <b>{{username}}</b>
+          <button id="logout-button" onclick="logout()">Logout</button>
+      </p>
+  {% else %}
+      <p>You are viewing forum as as guest.<p>
+        <form id="login-form">
+          <div><label>
+            Username:
+            <input id="username-input" name="username" type="text"/>
+          </label></div>
+
+          <div><label>
+            Password:
+            <input id="password-input" name="password" type="password"/>
+          </label></div>
+
+          <div><button id="login-button" onclick="login()">Login</button></div>
+        </form>
+
+    <button onclick="window.location.href = '/register'">Register</button>
+  {% endif %}
+</div>
+
+{% block content %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,10 @@
+<div id="message{{msg.id}}" style="margin-left: {{depth_ind * 50}}px">
+  <div>
+    <b>{{msg.author.username}}</b>
+    {{msg.time}}
+    {% if logged_in %}
+      <button onclick="reply({{msg.id}})">Reply</button>
+    {% endif %}
+  </div>
+  {{text}}
+</div>

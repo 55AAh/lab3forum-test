@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+
+{% block title %}Threads{% endblock %}
+
+{% block content %}
+<div id="statistics">
+  <h4>
+      Users: {{users_count}},
+      threads: {{threads_count}},
+      messages: {{messages_count}}
+  </h4>
+</div>
+
+{% if logged_in %}
+<div><a href="/new-thread">Create new thread</a></div>
+{% endif %}
+
+<div id="threads_list">
+  <h3>Threads:</h3>
+  <ul>
+      {% for thread in threads %}
+          <li>
+              <a href="/threads/{{thread.id}}">{{thread.title}}</a> ({{thread.creator.username}}),
+              time: {{thread.lasttime}},
+              messages: {{thread.messages_count}}
+          </li>
+      {% endfor %}
+  </ul>
+</div>
+{% endblock %}

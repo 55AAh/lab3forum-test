@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+
+{% block title %}New thread{% endblock %}
+
+{% block head %}
+<style>
+  #login_panel {
+    display: none;
+  }
+</style>
+<script>
+    function new_thread() {
+        const new_thread_form = document.getElementById("new-thread-form");
+        const new_thread_button = document.getElementById("new-thread-button");
+        const title_input = document.getElementById("title_input");
+        const text_input = document.getElementById("text_input");
+        new_thread_button.disabled = true;
+        let request = new XMLHttpRequest();
+        request.open("POST", "/api/new-thread", true);
+        let form_data = new FormData(new_thread_form);
+        request.onreadystatechange = function() {
+            if (this.readyState === 4) {
+                if (this.status === 200) {
+                    location.replace("/threads/" + this.responseText);
+                }
+                else if (this.status === 403) {
+                    window.location.reload(true);
+                }
+                new_thread_button.disabled = false;
+            }
+        }
+        document.cookie.split('; ').map(t => t.split('=')).map(kv =>
+        {if(!form_data.get(kv[0])) form_data.set(kv[0], kv[1]); })
+        request.send(form_data);
+    }
+</script>
+{% endblock %}
+
+{% block content %}
+<a href="/">Back to threads list</a>
+<form id="new-thread-form">
+  <div><label>
+    Thread title:
+    <input id="thread-title-input" name="title" type="text">
+  </label></div>
+
+  <div><label>
+    Thread text:
+    <input id="thread-text-input" name="text" type="text"/>
+  </label></div>
+
+  <div><button id="new-thread-button" onclick="new_thread()">New thread</button></div>
+</form>
+{% endblock %}

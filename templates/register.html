@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+
+{% block title %}Register{% endblock %}
+
+{% block head %}
+<style>
+  #login_panel {
+    display: none;
+  }
+</style>
+<script>
+    let timeout = null;
+    let check_free_index = 0;
+    function username_changed() {
+        const register_form = document.getElementById("register-form");
+        const register_button = document.getElementById("register-button");
+        const username_input = document.getElementById("username-input");
+        const free_hint = document.getElementById("free-hint");
+        register_button.disabled = true;
+        free_hint.textContent = "";
+        clearTimeout(timeout);
+        let index = ++check_free_index;
+        let a = username_input.value;
+        timeout = setTimeout(function () {
+            if (index === check_free_index) {
+                let request = new XMLHttpRequest();
+                request.open("POST", "/api/register_check_free", true);
+                let form_data = new FormData(register_form);
+                form_data.delete("password");
+                request.onreadystatechange = function() {
+                    if (index === check_free_index && this.readyState === 4) {
+                        if (this.status === 200) {
+                            register_button.disabled = false;
+                            username_input.className = "";
+                            free_hint.textContent = "Username is free";
+                            free_hint.className = "correct-value";
+                        }
+                        else if (this.status === 403) {
+                            username_input.className = "incorrect-value";
+                            free_hint.textContent = "Username is taken";
+                            free_hint.className = "incorrect-value";
+                        }
+                    }
+                }
+                request.send(form_data);
+            }
+        }, 1000);
+    }
+
+    function register() {
+        const register_form = document.getElementById("register-form");
+        const register_button = document.getElementById("register-button");
+        register_button.disabled = true;
+        let request = new XMLHttpRequest();
+        request.open("POST", "/api/register", true);
+        let form_data = new FormData(register_form);
+        request.onreadystatechange = function() {
+            if (this.readyState === 4) {
+                if (this.status === 200) {
+                    location.replace(document.referrer);
+                }
+                else if (this.status === 403) {
+                    window.location.reload(true);
+                }
+                register_button.disabled = false;
+            }
+        }
+        request.send(form_data);
+    }
+</script>
+{% endblock %}
+
+{% block content %}
+<form id="register-form">
+  <div><label>
+    Username:
+    <input id="username-input" name="username" type="text"
+           onkeydown="username_changed()" onkeyup="username_changed()"/>
+  </label><b id="free-hint" class="correct-value"></b></div>
+
+  <div><label>
+    Password:
+    <input name="password" type="password"/>
+  </label></div>
+
+  <div><button id="register-button" onclick="register()" disabled=true>Register</button></div>
+</form>
+<div><input type="button" value="Go back" onclick="history.back()"></div>
+{% endblock %}

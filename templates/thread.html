@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+
+{% block title %}{{thread.title}}{% endblock %}
+
+{% block head %}
+<style>
+    .replying-to {
+        color: blue;
+    }
+</style>
+
+<script>
+    var reply_id = null;
+    function reply(id) {
+        if (window.reply_id !== null)
+            document.getElementById("message" + window.reply_id).className = "";
+        if (id !== null) {
+            document.getElementById("message" + id).className = "replying-to";
+            document.getElementById("cancel-replay-button").style.display = "inline";
+        }
+        else
+            document.getElementById("cancel-replay-button").style.display = "none";
+        window.reply_id = id;
+    }
+
+    function comment() {
+        const send_message_form = document.getElementById("send-message-form");
+        const send_message_button = document.getElementById("send-message-button");
+        send_message_button.disabled = true;
+        let request = new XMLHttpRequest();
+        request.open("POST", "/api/send-message", true);
+        let form_data = new FormData(send_message_form);
+        request.onreadystatechange = function() {
+            if (this.readyState === 4) {
+                if (this.status === 200) {
+                    window.location.reload(true);
+                }
+                else if (this.status === 403) { }
+                send_message_button.disabled = false;
+            }
+        }
+        form_data.set("thread_id", {{thread.id}});
+        form_data.set("reply_id", window.reply_id);
+        document.cookie.split('; ').map(t => t.split('=')).map(kv =>
+            {if(!form_data.get(kv[0])) form_data.set(kv[0], kv[1]); })
+        request.send(form_data);
+    }
+
+    function delete_thread() {
+        let request = new XMLHttpRequest();
+        request.open("POST", "/api/delete-thread", true);
+        let form_data = new FormData();
+        request.onreadystatechange = function() {
+            if (this.readyState === 4) {
+                if (this.status === 200) {
+                    location.replace("/threads");
+                } else if (this.status === 403) {
+                }
+            }
+        }
+        form_data.set("thread_id", {{thread.id}});
+        document.cookie.split('; ').map(t => t.split('=')).map(kv =>
+            {if(!form_data.get(kv[0])) form_data.set(kv[0], kv[1]); })
+        request.send(form_data);
+    }
+</script>
+{% endblock %}
+
+{% block content %}
+<a href="/">Back to threads list</a>
+<h1>{{thread.title}}</h1>
+<h2>{{thread.creator.username}}</h2>
+<p>{{thread.text}}</p>
+
+{% if is_owner %}
+<button id="delete-thread-button" onclick="delete_thread()">Delete thread</button>
+{% endif %}
+
+<div id="messages_list">
+{{messages_html|safe}}
+</div>
+
+{% if logged_in %}
+<form id="send-message-form">
+    <label>
+        Message text
+        <input id="message-text-input" name="text" type="text">
+    </label>
+    <button id="send-message-button" onclick="comment()">Send message</button>
+</form>
+<button id="cancel-replay-button" onclick="reply(null)" style="display: none">Cancel reply</button>
+{% endif %}
+{% endblock %}
