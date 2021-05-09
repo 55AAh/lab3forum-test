@@ -127,5 +127,6 @@ class Db:
         database_url = Db.get_url_from_environment()
         if database_url is None:
             database_url = Db.get_url_from_flyway()
+        print(database_url)
         self.engine = create_engine(database_url, echo=True)
         self.session = DbSession(sessionmaker(bind=self.engine, expire_on_commit=False)())
