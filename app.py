@@ -69,51 +69,72 @@ class RequestData:
 @app.route("/threads")
 def threads_list():
     req_data = RequestData().cookies()
-    users_count, threads_count, messages_count = server.get_stats()
-    threads = server.get_threads_list()
+    users_count, threads_count, comments_count = server.get_stats()
+    html = ""
+    for thread in server.get_threads_list():
+        creator_username = thread.creator.username
+        if thread.creator.username == req_data.username:
+            creator_username = "<b>" + creator_username + "</b>"
+        html += render_template("thread-preview.html",
+                                creator_username=creator_username,
+                                thread=thread) + "\n"
     return render_template("threads-list.html",
                            **req_data.__dict__,
-                           users_count=users_count, threads_count=threads_count, messages_count=messages_count,
-                           threads=threads)
+                           users_count=users_count, threads_count=threads_count, comments_count=comments_count,
+                           threads_html=html)
 
 
 @app.route("/threads/<thread_id>")
 def thread(thread_id):
+    try:
+        thread_id = int(thread_id)
+    except ValueError:
+        abort(400)
     req_data = RequestData().cookies()
     thread = server.get_thread(thread_id)
     if thread is None:
         return redirect("/threads")
-    messages = list()
-    messages_map = dict()
-    for msg in server.get_thread_messages(thread_id):
-        msg.replies = list()
-        if msg.reply_id is None:
-            messages.append(msg)
+    comments = list()
+    comments_map = dict()
+    for cmt in server.get_thread_comments(thread_id):
+        cmt.replies = list()
+        if cmt.reply_id is None:
+            comments.append(cmt)
         else:
-            messages_map[msg.reply_id].replies.append(msg)
-        messages_map[msg.id] = msg
+            comments_map[cmt.reply_id].replies.append(cmt)
+        comments_map[cmt.id] = cmt
 
     def rec(base, depth_ind=0):
         html = ""
-        for msg in base:
-            html += render_template("message.html",
+        for cmt in base:
+            replies_html = rec(cmt.replies, depth_ind + 1)
+            author_username = cmt.author.username
+            if cmt.author.username == req_data.username:
+                author_username = "<b>" + author_username + "</b>"
+            if cmt.author.username == thread.creator.username:
+                author_username = '<span style="background: cornsilk">' + author_username + "</span>"
+            html += render_template("comment.html",
                                     **req_data.__dict__,
-                                    msg=msg,
-                                    depth_ind=depth_ind) + "\n"
-            html += rec(msg.replies, depth_ind + 1)
+                                    cmt=cmt,
+                                    author_username=author_username,
+                                    depth_ind=depth_ind,
+                                    collapse_text=("Collapse" if replies_html != "" else ""),
+                                    replies_html=replies_html) + "\n"
         return html
 
-    messages_html = rec(messages)
+    comments_html = rec(comments)
     return render_template("thread.html",
                            **req_data.__dict__,
                            thread=thread,
                            is_owner=thread.creator.username == req_data.username,
-                           messages_html=messages_html)
+                           comments_html=comments_html)
 
 
 @app.route("/register")
 def register():
-    return render_template("register.html")
+    req_data = RequestData().cookies()
+    return render_template("register.html",
+                           **req_data.__dict__)
 
 
 @app.route("/new-thread")
@@ -121,7 +142,14 @@ def new_thread():
     req_data = RequestData().cookies()
     if not req_data.logged_in:
         abort(403)
-    return render_template("new-thread.html")
+    return render_template("new-thread.html",
+                           **req_data.__dict__)
+
+
+@app.route("/admin")
+def admin_panel():
+    return render_template("admin-panel.html",
+                           admin_password=server.get_admin_password())
 
 
 @app.route("/api/login", methods=["POST"])
@@ -177,8 +205,8 @@ def api_new_thread():
     return str(new_thread.id)
 
 
-@app.route("/api/send-message", methods=["POST"])
-def api_send_message():
+@app.route("/api/send-comment", methods=["POST"])
+def api_send_comment():
     req_data = RequestData().form(require_auth_params=True)
     if req_data is None \
             or "thread_id" not in req_data.__dict__ \
@@ -187,10 +215,10 @@ def api_send_message():
         abort(400)
     if not req_data.logged_in:
         abort(403)
-    new_message = server.add_message(req_data.thread_id, req_data.username, req_data.reply_id, req_data.text)
-    if new_message is None:
+    new_comment = server.add_comment(req_data.thread_id, req_data.username, req_data.reply_id, req_data.text)
+    if new_comment is None:
         abort(403)
-    return str(new_message.id)
+    return str(new_comment.id)
 
 
 @app.route("/api/delete-thread", methods=["POST"])
@@ -207,10 +235,15 @@ def api_delete_thread():
     return server.delete_thread(req_data.thread_id)
 
 
-@app.route("/reset-database")
-def reset_database():
+@app.route("/api/reset-database", methods=["POST"])
+def api_reset_database():
+    req_data = RequestData().form()
+    if "admin_password" not in req_data.__dict__:
+        abort(400)
+    if req_data.admin_password != server.get_admin_password():
+        abort(403)
     server.reset_database()
-    return redirect("/")
+    return ""
 
 
 @app.route("/")
@@ -219,9 +252,10 @@ def index():
 
 
 if __name__ == "__main__":
-    app.jinja_env.auto_reload = True
-    app.config['TEMPLATES_AUTO_RELOAD'] = True
-    app.debug = True
-    print("STARTING")
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host='0.0.0.0', port=port)
+    if os.environ.get("DEBUG"):
+        app.jinja_env.auto_reload = True
+        app.config['TEMPLATES_AUTO_RELOAD'] = True
+        app.debug = True
+    host = os.environ.get("HOST", '127.0.0.1')
+    port = int(os.environ.get("PORT", 80))
+    app.run(host=host, port=port)

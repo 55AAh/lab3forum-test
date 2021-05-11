@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin panel - Lab3Forum</title>
+
+    <script>
+        function reset_database() {
+            const admin_password_input = document.getElementById("admin-password-input");
+            if (!confirm("Are you sure?"))
+              return;
+            let request = new XMLHttpRequest();
+            request.open("POST", "/api/reset-database", true);
+            let form_data = new FormData();
+            request.onreadystatechange = function() {
+                if (this.readyState === 4) {
+                    if (this.status === 200) {
+                        alert("Database is reset!");
+                        location.replace("/admin");
+                    } else if (this.status === 403) {
+                        alert("Access forbidden!");
+                    }
+                }
+            }
+            form_data.set("admin_password", admin_password_input.value);
+            request.send(form_data);
+        }
+    </script>
+</head>
+<body>
+    <div>
+        <a href="/">Back to main page</a>
+        <p>
+            <label>Password:</label>
+            <input id="admin-password-input">
+        </p>
+        <button id="reset-database-button" class="btn btn-info my-2 my-sm-0" onclick="reset_database()">Reset database</button>
+    </div>
+</body>
+</html>

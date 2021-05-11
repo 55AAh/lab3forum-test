@@ -1,18 +1,26 @@
-db connection parameters in ```flyway.conf```
+##### Розгорнутий на Heroku застосунок
+[Lab3Forum - Main Page](http://lab3forum.herokuapp.com/)
 
-bash:
+-----
+##### Розгортання на локальній машині
+
 ```shell
-export FLASK_ENV=development flask run
+git clone https://github.com/55AAh/DB_Lab3.git
+cd DB_Lab3
+python -m pip install -r requirements.txt
 ```
 
-cmd:
+Параметри підключення до БД задаються
+змінною оточення ```DATABASE_URL``` (у ```JDBC```-форматі),
+або у файлі ```flyway.conf```.
+
+Змінні оточення для backend-у: ```HOST```, ```PORT``` та ```DEBUG```.
+
 ```shell
-set FLASK_ENV=development
-flask run
+python app.py
 ```
 
-powershell:
-```shell
-$env:FLASK_ENV=development
-flask run
-```
+-----
+
+##### Діаграма зв'язків сутностей
+![ERD](ERD.svg)

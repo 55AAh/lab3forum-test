@@ -1,0 +1,11 @@
+<div style="margin: 15px; background: whitesmoke">
+    <a href="/threads/{{thread.id}}" style="color: inherit; text-decoration: inherit">
+      <div>
+        <span style="color: cornflowerblue">{{creator_username|safe}}</span>
+        <b>{{thread.lasttime.replace(microsecond=0)}}</b>,
+        comments: {{thread.comments_count}}
+      </div>
+      <h3><b>{{thread.title}}</b></h3>
+      <div>{{thread.text}}</div>
+    </a>
+</div>

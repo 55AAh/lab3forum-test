@@ -4,20 +4,25 @@
 
 {% block head %}
 <style>
-  #login_panel {
-    display: none;
-  }
+    #login-panel {
+        display: none;
+    }
 </style>
+
 <script>
-    function new_thread() {
-        const new_thread_form = document.getElementById("new-thread-form");
-        const new_thread_button = document.getElementById("new-thread-button");
-        const title_input = document.getElementById("title_input");
-        const text_input = document.getElementById("text_input");
+    function title_changed() {
+        const title_input = document.getElementById("thread-title-input");
+        const new_thread_button = document.getElementById("create-button");
+        new_thread_button.disabled = !title_input.value;
+    }
+
+    function create() {
+        const new_thread_button = document.getElementById("create-button");
+        const title_input = document.getElementById("thread-title-input");
+        const text_input = document.getElementById("thread-text-input");
         new_thread_button.disabled = true;
         let request = new XMLHttpRequest();
         request.open("POST", "/api/new-thread", true);
-        let form_data = new FormData(new_thread_form);
         request.onreadystatechange = function() {
             if (this.readyState === 4) {
                 if (this.status === 200) {
@@ -29,26 +34,35 @@
                 new_thread_button.disabled = false;
             }
         }
+        let form_data = new FormData();
         document.cookie.split('; ').map(t => t.split('=')).map(kv =>
         {if(!form_data.get(kv[0])) form_data.set(kv[0], kv[1]); })
+        form_data.set("title", title_input.value);
+        form_data.set("text", text_input.value);
         request.send(form_data);
     }
 </script>
 {% endblock %}
 
 {% block content %}
-<a href="/">Back to threads list</a>
-<form id="new-thread-form">
-  <div><label>
-    Thread title:
-    <input id="thread-title-input" name="title" type="text">
-  </label></div>
+<div class="" id="login-modal">
+  <div class="modal-dialog" role="document">
+    <div id="modal-content" class="modal-content">
+      <div class="modal-header border-bottom-0">
+          <a class="text-left" href="javascript:history.back()">Back</a>
+      </div>
+      <div class="modal-body">
+        <div class="form-title text-center">
+          <h4>New thread</h4>
+        </div>
+        <div class="d-flex flex-column text-center">
+            <input type="text" class="form-control" id="thread-title-input" name="title" onkeydown="title_changed()" onkeyup="title_changed()" placeholder="Title">
+            <textarea class="form-control" id="thread-text-input" name="text" placeholder="Text" rows="5"></textarea>
+          <button id="create-button" type="button" class="btn btn-info btn-block btn-round" onclick="create()" disabled="true">Create</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
-  <div><label>
-    Thread text:
-    <input id="thread-text-input" name="text" type="text"/>
-  </label></div>
-
-  <div><button id="new-thread-button" onclick="new_thread()">New thread</button></div>
-</form>
 {% endblock %}

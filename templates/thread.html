@@ -3,53 +3,71 @@
 {% block title %}{{thread.title}}{% endblock %}
 
 {% block head %}
+
 <style>
-    .replying-to {
-        color: blue;
+    .a {
+        color: cornsilk;
     }
 </style>
 
 <script>
-    var reply_id = null;
     function reply(id) {
-        if (window.reply_id !== null)
-            document.getElementById("message" + window.reply_id).className = "";
-        if (id !== null) {
-            document.getElementById("message" + id).className = "replying-to";
-            document.getElementById("cancel-replay-button").style.display = "inline";
-        }
-        else
-            document.getElementById("cancel-replay-button").style.display = "none";
-        window.reply_id = id;
+        let reply_block = document.getElementById("reply-block-" + id);
+        if (!reply_block)
+            return;
+        let reply_block_template = document.getElementById("reply-block-template")
+        document.querySelectorAll(".reply-button").forEach(function (el) { el.style.display = "none"; })
+        reply_block.innerHTML = reply_block_template.innerHTML.replaceAll("#ID#", id);
     }
 
-    function comment() {
-        const send_message_form = document.getElementById("send-message-form");
-        const send_message_button = document.getElementById("send-message-button");
-        send_message_button.disabled = true;
+    function comment(id) {
+        const send_comment_button = document.getElementById("send-comment-button-" + id);
+        const comment_text_input = document.getElementById("comment-text-input-" + id);
+        send_comment_button.disabled = true;
         let request = new XMLHttpRequest();
-        request.open("POST", "/api/send-message", true);
-        let form_data = new FormData(send_message_form);
+        request.open("POST", "/api/send-comment", true);
         request.onreadystatechange = function() {
             if (this.readyState === 4) {
                 if (this.status === 200) {
                     window.location.reload(true);
                 }
                 else if (this.status === 403) { }
-                send_message_button.disabled = false;
+                send_comment_button.disabled = false;
             }
         }
-        form_data.set("thread_id", {{thread.id}});
-        form_data.set("reply_id", window.reply_id);
+        let form_data = new FormData();
+        form_data.set("reply_id", id);
         document.cookie.split('; ').map(t => t.split('=')).map(kv =>
             {if(!form_data.get(kv[0])) form_data.set(kv[0], kv[1]); })
+        form_data.set("thread_id", {{thread.id}});
+        form_data.set("text", comment_text_input.value);
         request.send(form_data);
     }
 
+    function cancel_reply(id) {
+        const reply_block = document.getElementById("reply-block-" + id);
+        reply_block.innerHTML = "";
+        document.querySelectorAll(".reply-button").forEach(function (el) { el.style.display = ""; })
+    }
+
+    function collapse(id) {
+        const replies_collapse_button = document.getElementById("replies-collapse-button-" + id);
+        const replies = document.getElementById("comment-replies-" + id);
+        if (!replies.style.display) {
+            replies_collapse_button.innerText = "Expand"
+            replies.style.display = "none";
+        }
+        else {
+            replies_collapse_button.innerText = "Collapse"
+            replies.style.display = "";
+        }
+    }
+
     function delete_thread() {
+        if (!confirm("Are you sure?"))
+            return;
         let request = new XMLHttpRequest();
         request.open("POST", "/api/delete-thread", true);
-        let form_data = new FormData();
         request.onreadystatechange = function() {
             if (this.readyState === 4) {
                 if (this.status === 200) {
@@ -58,36 +76,49 @@
                 }
             }
         }
-        form_data.set("thread_id", {{thread.id}});
+        let form_data = new FormData();
         document.cookie.split('; ').map(t => t.split('=')).map(kv =>
             {if(!form_data.get(kv[0])) form_data.set(kv[0], kv[1]); })
+        form_data.set("thread_id", {{thread.id}});
         request.send(form_data);
     }
 </script>
 {% endblock %}
 
 {% block content %}
-<a href="/">Back to threads list</a>
+
+<span class="container row">
+    <div class="col-auto mr-auto">
+        {{thread.creator.username}}
+        <b>{{thread.lasttime.replace(microsecond=0)}}</b>,
+        comments: {{thread.comments_count}}
+    </div>
+
+    {% if is_owner %}
+        <div class="col-auto">
+            <button id="delete-thread-button" class="btn btn-info my-2 my-sm-0" onclick="delete_thread()">Delete thread</button>
+        </div>
+    {% endif %}
+</span>
 <h1>{{thread.title}}</h1>
-<h2>{{thread.creator.username}}</h2>
 <p>{{thread.text}}</p>
 
-{% if is_owner %}
-<button id="delete-thread-button" onclick="delete_thread()">Delete thread</button>
+<div style="display: none">
+    <div id="reply-block-template">
+        <textarea id="comment-text-input-#ID#" class="form-control" name="text" placeholder="Text" rows="5"></textarea>
+        <span>
+            <button id="send-comment-button-#ID#" class="btn btn-info my-2 my-sm-0" onclick="comment(#ID#)">Send comment</button>
+            <button id="cancel-reply-button-#ID#" class="btn btn-info my-2 my-sm-0" onclick="cancel_reply(#ID#)">Cancel</button>
+        </span>
+    </div>
+</div>
+{% if logged_in %}
+<button class="reply-button btn btn-info my-2 my-sm-0" onclick="reply(null)">Comment</button>
+<div id="reply-block-null"></div>
 {% endif %}
 
-<div id="messages_list">
-{{messages_html|safe}}
+<div id="comments_list" class="align-bottom">
+{{comments_html|safe}}
 </div>
 
-{% if logged_in %}
-<form id="send-message-form">
-    <label>
-        Message text
-        <input id="message-text-input" name="text" type="text">
-    </label>
-    <button id="send-message-button" onclick="comment()">Send message</button>
-</form>
-<button id="cancel-replay-button" onclick="reply(null)" style="display: none">Cancel reply</button>
-{% endif %}
 {% endblock %}

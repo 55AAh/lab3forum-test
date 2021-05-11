@@ -4,41 +4,41 @@
 
 {% block head %}
 <style>
-  #login_panel {
-    display: none;
-  }
+    #login-panel {
+        display: none;
+    }
 </style>
+
 <script>
+    {% if logged_in %}
+        history.back();
+    {% endif %}
+
     let timeout = null;
     let check_free_index = 0;
-    function username_changed() {
-        const register_form = document.getElementById("register-form");
+    function register_username_changed() {
         const register_button = document.getElementById("register-button");
-        const username_input = document.getElementById("username-input");
-        const free_hint = document.getElementById("free-hint");
+        const username_input = document.getElementById("register-username-input");
+        const password_input = document.getElementById("register-password-input");
         register_button.disabled = true;
-        free_hint.textContent = "";
         clearTimeout(timeout);
         let index = ++check_free_index;
         let a = username_input.value;
         timeout = setTimeout(function () {
             if (index === check_free_index) {
                 let request = new XMLHttpRequest();
+                let form_data = new FormData();
+                form_data.set("username", username_input.value);
                 request.open("POST", "/api/register_check_free", true);
-                let form_data = new FormData(register_form);
-                form_data.delete("password");
                 request.onreadystatechange = function() {
                     if (index === check_free_index && this.readyState === 4) {
                         if (this.status === 200) {
-                            register_button.disabled = false;
-                            username_input.className = "";
-                            free_hint.textContent = "Username is free";
-                            free_hint.className = "correct-value";
+                            if (password_input.value)
+                                register_button.disabled = false;
+                            username_input.style.backgroundColor = null;
                         }
                         else if (this.status === 403) {
-                            username_input.className = "incorrect-value";
-                            free_hint.textContent = "Username is taken";
-                            free_hint.className = "incorrect-value";
+                            username_input.style.backgroundColor = "lightpink";
                         }
                     }
                 }
@@ -47,17 +47,32 @@
         }, 1000);
     }
 
-    function register() {
-        const register_form = document.getElementById("register-form");
+    function register_password_changed() {
         const register_button = document.getElementById("register-button");
+        const username_input = document.getElementById("register-username-input");
+        const password_input = document.getElementById("register-password-input");
+        if (password_input.value) {
+            password_input.style.backgroundColor = null;
+            if (username_input.value && !username_input.style.backgroundColor)
+                register_button.disabled = false;
+        }
+        else {
+            password_input.style.backgroundColor = "lightpink";
+            register_button.disabled = true;
+        }
+    }
+
+    function register() {
+        const register_button = document.getElementById("register-button");
+        const username_input = document.getElementById("register-username-input");
+        const password_input = document.getElementById("register-password-input");
         register_button.disabled = true;
         let request = new XMLHttpRequest();
         request.open("POST", "/api/register", true);
-        let form_data = new FormData(register_form);
         request.onreadystatechange = function() {
             if (this.readyState === 4) {
                 if (this.status === 200) {
-                    location.replace(document.referrer);
+                    window.location = document.referrer;
                 }
                 else if (this.status === 403) {
                     window.location.reload(true);
@@ -65,25 +80,34 @@
                 register_button.disabled = false;
             }
         }
+        let form_data = new FormData();
+        form_data.set("username", username_input.value);
+        form_data.set("password", password_input.value);
         request.send(form_data);
     }
 </script>
 {% endblock %}
 
 {% block content %}
-<form id="register-form">
-  <div><label>
-    Username:
-    <input id="username-input" name="username" type="text"
-           onkeydown="username_changed()" onkeyup="username_changed()"/>
-  </label><b id="free-hint" class="correct-value"></b></div>
 
-  <div><label>
-    Password:
-    <input name="password" type="password"/>
-  </label></div>
+<div class="" id="login-modal">
+  <div class="modal-dialog" role="document">
+    <div id="modal-content" class="modal-content">
+      <div class="modal-header border-bottom-0">
+          <a class="text-left" href="javascript:history.back()">Back</a>
+      </div>
+      <div class="modal-body">
+        <div class="form-title text-center">
+          <h4>Registration</h4>
+        </div>
+        <div class="d-flex flex-column text-center">
+            <input type="text" class="form-control" id="register-username-input" name="username" onkeydown="register_username_changed()" onkeyup="register_username_changed()" placeholder="login">
+            <input type="password" class="form-control" id="register-password-input" name="password" onkeyup="register_password_changed()" placeholder="password">
+            <button id="register-button" type="button" class="btn btn-info btn-block btn-round" disabled="true" onclick="register()">Register</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
-  <div><button id="register-button" onclick="register()" disabled=true>Register</button></div>
-</form>
-<div><input type="button" value="Go back" onclick="history.back()"></div>
 {% endblock %}

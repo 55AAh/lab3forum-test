@@ -1,7 +1,6 @@
-import os
-
 from sqlalchemy import create_engine, Column, Integer, Sequence, String, DateTime, ForeignKey
 from sqlalchemy.orm import sessionmaker, declarative_base, relationship
+from sqlalchemy.engine.reflection import Inspector
 from datetime import datetime
 
 Base = declarative_base()
@@ -34,7 +33,7 @@ class Thread(Base):
     title = Column(String, nullable=False)
     text = Column(String, nullable=False)
     lasttime = Column(DateTime, nullable=False)
-    messages_count = Column(Integer, nullable=False, default=0)
+    comments_count = Column(Integer, nullable=False, default=0)
 
     @staticmethod
     def new(session, creator, title, text):
@@ -48,7 +47,7 @@ class Thread(Base):
         return session.query(Thread).filter_by(id=thread_id).first()
 
     def delete(self, session):
-        session.query(Message).filter(Message.thread_id == self.id).delete()
+        session.query(Comment).filter(Comment.thread_id == self.id).delete()
         session.query(Thread).filter(Thread.id == self.id).delete()
 
 
@@ -56,12 +55,12 @@ Thread.creator = relationship("User", back_populates="threads")
 User.threads = relationship("Thread", order_by=Thread.lasttime, back_populates="creator")
 
 
-class Message(Base):
-    __tablename__ = "messages"
-    id = Column(Integer, Sequence("message_id_seq"), primary_key=True)
+class Comment(Base):
+    __tablename__ = "comments"
+    id = Column(Integer, Sequence("comment_id_seq"), primary_key=True)
     thread_id = Column(Integer, ForeignKey("threads.id"), nullable=False)
     author_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    reply_id = Column(Integer, ForeignKey("messages.id"), nullable=True)
+    reply_id = Column(Integer, ForeignKey("comments.id"), nullable=True)
     time = Column(DateTime, nullable=False)
     text = Column(String, nullable=False)
 
@@ -69,25 +68,25 @@ class Message(Base):
     def new(session, thread, author, reply, text):
         time = datetime.now()
         reply_id = reply.id if reply is not None else None
-        new_message = Message(thread_id=thread.id, author_id=author.id, reply_id=reply_id,
+        new_comment = Comment(thread_id=thread.id, author_id=author.id, reply_id=reply_id,
                               time=time, text=text)
-        session.add(new_message)
+        session.add(new_comment)
         thread = session.query(Thread).filter(Thread.id == thread.id).first()
-        thread.messages_count += 1
+        thread.comments_count += 1
         thread.lasttime = time
-        return new_message
+        return new_comment
 
     @staticmethod
-    def find(session, message_id):
-        return session.query(Message).filter_by(id=message_id).first()
+    def find(session, comment_id):
+        return session.query(Comment).filter_by(id=comment_id).first()
 
 
-Message.author = relationship("User", back_populates="messages")
-User.messages = relationship("Message", order_by=Message.id, back_populates="author")
+Comment.author = relationship("User", back_populates="comments")
+User.comments = relationship("Comment", order_by=Comment.id, back_populates="author")
 
 
-Message.thread = relationship("Thread", back_populates="messages")
-Thread.messages = relationship("Message", order_by=Message.id, back_populates="thread")
+Comment.thread = relationship("Thread", back_populates="comments")
+Thread.comments = relationship("Comment", order_by=Comment.id, back_populates="thread")
 
 
 class DbSession:
@@ -105,9 +104,14 @@ class DbSession:
 
 
 class Db:
+    def is_empty(self):
+        return "users" not in self.inspector.get_table_names()
+
     @staticmethod
-    def get_url_from_environment():
-        return os.environ.get("DATABASE")
+    def get_url_from_parameter(database_url):
+        if database_url is None:
+            return None
+        return database_url.replace("postgres", "postgresql")
 
     @staticmethod
     def get_url_from_flyway():
@@ -123,10 +127,11 @@ class Db:
         password = config["flyway.password"]
         return f'{driver}://{user}:{password}@{address}'
 
-    def __init__(self):
-        database_url = Db.get_url_from_environment()
+    def __init__(self, database_url, debug=False):
+        debug = debug is not None
+        database_url = Db.get_url_from_parameter(database_url)
         if database_url is None:
             database_url = Db.get_url_from_flyway()
-        print(database_url)
-        self.engine = create_engine(database_url, echo=True)
+        self.engine = create_engine(database_url, echo=debug)
+        self.inspector = Inspector.from_engine(self.engine)
         self.session = DbSession(sessionmaker(bind=self.engine, expire_on_commit=False)())

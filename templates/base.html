@@ -2,32 +2,46 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+
     <title>{% block title %}{% endblock %} - Lab3Forum</title>
 
     <script>
+        function username_password_changed() {
+            const login_button = document.getElementById("login-button");
+            const username_input = document.getElementById("username-input");
+            const password_input = document.getElementById("password-input");
+            username_input.style.backgroundColor = null;
+            password_input.style.backgroundColor = null;
+            login_button.disabled = !username_input.value || !password_input.value;
+        }
+
         function login() {
-            const login_form = document.getElementById("login-form");
             const login_button = document.getElementById("login-button");
             const username_input = document.getElementById("username-input");
             const password_input = document.getElementById("password-input");
             login_button.disabled = true;
             let request = new XMLHttpRequest();
             request.open("POST", "/api/login", true);
-            let form_data = new FormData(login_form);
             request.onreadystatechange = function() {
                 if (this.readyState === 4) {
                     if (this.status === 200) {
                         window.location.reload(true);
                     }
                     else if (this.status === 403) {
-                        username_input.className = "incorrect-value";
-                        password_input.className = "incorrect-value";
+                        username_input.style.backgroundColor = "lightpink";
+                        password_input.style.backgroundColor = "lightpink"
                     }
                     login_button.disabled = false;
                 }
             }
+            let form_data = new FormData();
             document.cookie.split('; ').map(t => t.split('=')).map(kv =>
             {if(!form_data.get(kv[0])) form_data.set(kv[0], kv[1]); })
+            form_data.set("username", username_input.value);
+            form_data.set("password", password_input.value);
             form_data.set("logged_in", "true");
             request.send(form_data);
         }
@@ -49,32 +63,54 @@
 </head>
 
 <body>
-<div id="login_panel">
-  {% if logged_in %}
-      <p>
-          Logged in as <b>{{username}}</b>
-          <button id="logout-button" onclick="logout()">Logout</button>
-      </p>
-  {% else %}
-      <p>You are viewing forum as as guest.<p>
-        <form id="login-form">
-          <div><label>
-            Username:
-            <input id="username-input" name="username" type="text"/>
-          </label></div>
 
-          <div><label>
-            Password:
-            <input id="password-input" name="password" type="password"/>
-          </label></div>
-
-          <div><button id="login-button" onclick="login()">Login</button></div>
+<nav class="navbar navbar-icon-top navbar-expand-lg navbar-dark bg-dark">
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <a class="navbar-brand" href="/">Lab3Forum</a>
+        <span class="navbar-nav mr-auto"></span>
+        <form id="login-panel" class="form-inline my-2 my-lg-0">
+            {% if logged_in %}
+                <p class="btn-outline-success my-2 my-sm-0" style="margin-right: 5px">
+                    Logged in as <b>{{username}}</b>
+                </p>
+                <button id="logout-button" class="btn btn-info my-2 my-sm-0" onclick="logout()">Log out</button>
+            {% else %}
+                <button type="button" id="show-login-button" class="btn btn-info btn-round" data-toggle="modal" data-target="#login-modal">Log in</button>
+                <div class="modal fade" id="login-modal" tabindex="-1" role="dialog" aria-hidden="true">
+                  <div class="modal-dialog modal-dialog-centered" role="document">
+                    <div class="modal-content">
+                      <div class="modal-header border-bottom-0">
+                        <a class="text-left" href="/register">Register</a>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">×</span>
+                        </button>
+                      </div>
+                      <div class="modal-body">
+                        <div class="form-title text-center">
+                          <h4>Login</h4>
+                        </div>
+                        <div class="d-flex flex-column text-center">
+                            <input type="text" class="form-control" id="username-input" name="username" onkeydown="username_password_changed()" onkeyup="username_password_changed()" placeholder="login">
+                            <input type="password" class="form-control" id="password-input" name="password" onkeydown="username_password_changed()" onkeyup="username_password_changed()" placeholder="password">
+                            <button id="login-button" type="button" class="btn btn-info btn-block btn-round" onclick="login()" disabled="true">Log in</button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+            {% endif %}
         </form>
+    </div>
+</nav>
 
-    <button onclick="window.location.href = '/register'">Register</button>
-  {% endif %}
+<div class="container">
+    <br>
+    {% block content %}{% endblock %}
 </div>
 
-{% block content %}{% endblock %}
+<script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+
 </body>
 </html>

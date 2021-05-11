@@ -1,0 +1,15 @@
+<div id="comment{{cmt.id}}" style="margin-left: {{depth_ind * 50}}px; margin-top: 15px; margin-bottom: 15px; background: whitesmoke">
+  <div>
+    <span style="color: cornflowerblue">{{author_username|safe}}</span>
+    {{cmt.time.replace(microsecond=0)}}
+    {% if logged_in %}
+      <a class="text-left reply-button" href="javascript:reply({{cmt.id}})">Reply</a>
+    {% endif %}
+  </div>
+  {{cmt.text}}
+  <div id="reply-block-{{cmt.id}}"></div>
+  <a id="replies-collapse-button-{{cmt.id}}" class="text-left" href="javascript:collapse({{cmt.id}})">{{collapse_text}}</a>
+</div>
+<div id="comment-replies-{{cmt.id}}">
+  {{replies_html|safe}}
+</div>
